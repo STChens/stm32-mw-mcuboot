@@ -31,11 +31,11 @@ uint32_t bootutil_get_caps(void)
     res |= BOOTUTIL_CAP_RSA3072;
 #endif
 #endif
-#if defined(MCUBOOT_SIGN_EC)
-    res |= BOOTUTIL_CAP_ECDSA_P224;
-#endif
 #if defined(MCUBOOT_SIGN_EC256)
     res |= BOOTUTIL_CAP_ECDSA_P256;
+#endif
+#if defined(MCUBOOT_SIGN_EC384)
+    res |= BOOTUTIL_CAP_ECDSA_P384;
 #endif
 #if defined(MCUBOOT_SIGN_ED25519)
     res |= BOOTUTIL_CAP_ED25519;

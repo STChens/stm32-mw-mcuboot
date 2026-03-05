@@ -35,7 +35,7 @@
 #include <flash_map_backend/flash_map_backend.h>
 #include "bootutil/bootutil_log.h"
 #include "bootutil/image.h"
-#include "bootutil/crypto/sha256.h"
+#include "bootutil/crypto/sha.h"
 #include "bootutil/sign_key.h"
 #include "bootutil/security_cnt.h"
 #include "bootutil/fault_injection_hardening.h"
@@ -66,7 +66,9 @@
 #endif
 
 /*
- * Compute SHA256 over the image.
+ * Compute SHA hash over the image.
+ * (SHA384 if ECDSA-P384 is being used,
+ *  SHA256 otherwise).
  */
 static int
 bootutil_img_hash(struct enc_key_data *enc_state, int image_index,
@@ -74,7 +76,7 @@ bootutil_img_hash(struct enc_key_data *enc_state, int image_index,
                   uint8_t *tmp_buf, uint32_t tmp_buf_sz, uint8_t *hash_result,
                   uint8_t *seed, int seed_len)
 {
-    bootutil_sha256_context sha256_ctx;
+    bootutil_sha_context sha_ctx;
     uint32_t blk_sz;
     uint32_t size;
     uint32_t off;
@@ -105,12 +107,12 @@ bootutil_img_hash(struct enc_key_data *enc_state, int image_index,
     }
 #endif
 
-    bootutil_sha256_init(&sha256_ctx);
+    bootutil_sha_init(&sha_ctx);
 
     /* in some cases (split image) the hash is seeded with data from
      * the loader image */
     if (seed && (seed_len > 0)) {
-        bootutil_sha256_update(&sha256_ctx, seed, seed_len);
+        bootutil_sha_update(&sha_ctx, seed, seed_len);
     }
 
     /* Hash is computed over image header and image itself. */
@@ -128,7 +130,9 @@ bootutil_img_hash(struct enc_key_data *enc_state, int image_index,
     size += hdr->ih_protect_tlv_size;
 
 #ifdef MCUBOOT_RAM_LOAD
-    bootutil_sha256_update(&sha256_ctx,(void*)(hdr->ih_load_addr), size);
+    bootutil_sha_update(&sha_ctx,
+                        (void*)(hdr->ih_load_addr),
+                        size);
 #else
     for (off = 0; off < size; off += blk_sz) {
         blk_sz = size - off;
@@ -150,7 +154,7 @@ bootutil_img_hash(struct enc_key_data *enc_state, int image_index,
 #endif
         rc = flash_area_read(fap, off, tmp_buf, blk_sz);
         if (rc) {
-            bootutil_sha256_drop(&sha256_ctx);
+            bootutil_sha_drop(&sha_ctx);
             return rc;
         }
 
@@ -183,11 +187,11 @@ bootutil_img_hash(struct enc_key_data *enc_state, int image_index,
 
         }
 #endif
-        bootutil_sha256_update(&sha256_ctx, tmp_buf, blk_sz);
+        bootutil_sha_update(&sha_ctx, tmp_buf, blk_sz);
     }
 #endif /* MCUBOOT_RAM_LOAD */
-    bootutil_sha256_finish(&sha256_ctx, hash_result);
-    bootutil_sha256_drop(&sha256_ctx);
+    bootutil_sha_finish(&sha_ctx, hash_result);
+    bootutil_sha_drop(&sha_ctx);
 
     return 0;
 }
@@ -199,8 +203,8 @@ bootutil_img_hash(struct enc_key_data *enc_state, int image_index,
  * configured for any signature, don't define this macro.
  */
 #if (defined(MCUBOOT_SIGN_RSA)      + \
-     defined(MCUBOOT_SIGN_EC)       + \
      defined(MCUBOOT_SIGN_EC256)    + \
+     defined(MCUBOOT_SIGN_EC384)    + \
      defined(MCUBOOT_SIGN_ED25519)) > 1
 #error "Only a single signature type is supported!"
 #endif
@@ -215,15 +219,12 @@ bootutil_img_hash(struct enc_key_data *enc_state, int image_index,
 #    endif
 #    define SIG_BUF_SIZE (MCUBOOT_SIGN_RSA_LEN / 8)
 #    define EXPECTED_SIG_LEN(x) ((x) == SIG_BUF_SIZE) /* 2048 bits */
-#elif defined(MCUBOOT_SIGN_EC)
-#    define EXPECTED_SIG_TLV IMAGE_TLV_ECDSA224
+#elif defined(MCUBOOT_SIGN_EC256) || \
+      defined(MCUBOOT_SIGN_EC384) || \
+      defined(MCUBOOT_SIGN_EC)
+#    define EXPECTED_SIG_TLV IMAGE_TLV_ECDSA_SIG
 #    define SIG_BUF_SIZE 128
-#    define EXPECTED_SIG_LEN(x)  ((x) <= 64) /* (tbc) 56 bytes for sign + 8 bytes for asn1 */
-#elif defined(MCUBOOT_SIGN_EC256)
-#    define EXPECTED_SIG_TLV IMAGE_TLV_ECDSA256
-#    define SIG_BUF_SIZE 128
-#    define EXPECTED_SIG_LEN(x) ((x) <= 72) /* (tbc) 64 bytes for sign + 8 bytes for asn1 */
-#    define KEY_LEN 91
+#    define EXPECTED_SIG_LEN(x) (1) /* always true, ASN.1 will validate */
 #elif defined(MCUBOOT_SIGN_ED25519)
 #    define EXPECTED_SIG_TLV IMAGE_TLV_ED25519
 #    define SIG_BUF_SIZE 64
@@ -237,23 +238,24 @@ bootutil_img_hash(struct enc_key_data *enc_state, int image_index,
 static int
 bootutil_find_key(int image_index, uint8_t *keyhash, uint8_t keyhash_len)
 {
-    bootutil_sha256_context sha256_ctx;
+    bootutil_sha_context sha_ctx;
+    int i;
     const struct bootutil_key *key;
-    uint8_t hash[32];
+    uint8_t hash[IMAGE_HASH_SIZE];
 
-    if (keyhash_len > 32) {
+    if (keyhash_len > IMAGE_HASH_SIZE) {
         return -1;
     }
 
     key = &bootutil_keys[image_index];
-    bootutil_sha256_init(&sha256_ctx);
-    bootutil_sha256_update(&sha256_ctx, key->key, *key->len);
-    bootutil_sha256_finish(&sha256_ctx, hash);
+    bootutil_sha_init(&sha_ctx);
+    bootutil_sha_update(&sha_ctx, key->key, *key->len);
+    bootutil_sha_finish(&sha_ctx, hash);
     if (!memcmp(hash, keyhash, keyhash_len)) {
-        bootutil_sha256_drop(&sha256_ctx);
+        bootutil_sha_drop(&sha_ctx);
         return (int)image_index;
     }
-    bootutil_sha256_drop(&sha256_ctx);
+    bootutil_sha_drop(&sha_ctx);
     return -1;
 }
 #else
@@ -261,17 +263,17 @@ extern unsigned int pub_key_len;
 static int
 bootutil_find_key(uint8_t image_index, uint8_t *key, uint16_t key_len)
 {
-    bootutil_sha256_context sha256_ctx;
-    uint8_t hash[32];
-    uint8_t key_hash[32];
+    bootutil_sha_context sha_ctx;
+    uint8_t hash[IMAGE_HASH_SIZE];
+    uint8_t key_hash[IMAGE_HASH_SIZE];
     size_t key_hash_size = sizeof(key_hash);
     int rc;
     fih_int fih_rc;
 
-    bootutil_sha256_init(&sha256_ctx);
-    bootutil_sha256_update(&sha256_ctx, key, key_len);
-    bootutil_sha256_finish(&sha256_ctx, hash);
-    bootutil_sha256_drop(&sha256_ctx);
+    bootutil_sha_init(&sha_ctx);
+    bootutil_sha_update(&sha_ctx, key, key_len);
+    bootutil_sha_finish(&sha_ctx, hash);
+    bootutil_sha_drop(&sha_ctx);
 
     rc = boot_retrieve_public_key_hash(image_index, key_hash, &key_hash_size);
     if (rc) {
@@ -387,8 +389,8 @@ bootutil_img_validate(struct enc_key_data *enc_state, int image_index,
     uint32_t off;
     uint16_t len;
     uint16_t type;
-    int sha256_valid = 0;
-#if defined(MCUBOOT_ENCRYPT_RSA) || defined(MCUBOOT_ENCRYPT_KW) || defined(MCUBOOT_ENCRYPT_EC256)
+    int image_hash_valid = 0;
+#if defined(MCUBOOT_ENCRYPT_RSA) || defined(MCUBOOT_ENCRYPT_KW) || defined(MCUBOOT_ENCRYPT_EC256) || defined(MCUBOOT_ENCRYPT_EC384)
     uint8_t tlv_enc = 0;
 #endif
 #ifdef EXPECTED_SIG_TLV
@@ -396,14 +398,14 @@ bootutil_img_validate(struct enc_key_data *enc_state, int image_index,
     int key_id = -1;
 #ifdef MCUBOOT_HW_KEY
     /* Few extra bytes for encoding and for public exponent. */
-    uint8_t key_buf[SIG_BUF_SIZE + 24];
+    uint8_t key_buf[KEY_BUF_SIZE];
 #endif
 #endif /* EXPECTED_SIG_TLV */
     struct image_tlv_iter it;
     uint8_t buf[SIG_BUF_SIZE];
-    uint8_t hash[32];
+    uint8_t hash[IMAGE_HASH_SIZE];
 #ifdef MCUBOOT_USE_HASH_REF
-    uint8_t hash_ref[32];
+    uint8_t hash_ref[IMAGE_HASH_SIZE];
 #endif /* MCUBOOT_USE_HASH_REF */
     int rc = 0;
     fih_int fih_rc = FIH_FAILURE;
@@ -420,7 +422,7 @@ bootutil_img_validate(struct enc_key_data *enc_state, int image_index,
     }
 
     if (out_hash) {
-        memcpy(out_hash, hash, 32);
+        memcpy(out_hash, hash, IMAGE_HASH_SIZE);
     }
 
     rc = bootutil_tlv_iter_begin(&it, hdr, fap, IMAGE_TLV_ANY, false);
@@ -440,7 +442,7 @@ bootutil_img_validate(struct enc_key_data *enc_state, int image_index,
             break;
         }
 
-        if (type == IMAGE_TLV_SHA256) {
+        if (type == EXPECTED_HASH_TLV) {
             /*
              * Verify the SHA256 image hash.  This must always be
              * present.
@@ -459,14 +461,14 @@ bootutil_img_validate(struct enc_key_data *enc_state, int image_index,
                 goto out;
             }
 
-            sha256_valid = 1;
+            image_hash_valid = 1;
 #ifdef EXPECTED_SIG_TLV
 #ifndef MCUBOOT_HW_KEY
         } else if (type == IMAGE_TLV_KEYHASH) {
             /*
              * Determine which key we should be checking.
              */
-            if (len > 32) {
+            if (len > 48) {
                 rc = -1;
                 goto out;
             }
@@ -486,7 +488,7 @@ bootutil_img_validate(struct enc_key_data *enc_state, int image_index,
             /*
              * Determine which key we should be checking.
              */
-            if ((len > sizeof(key_buf)) || (len != KEY_LEN)) {
+            if ((len > sizeof(key_buf)) || (len > sizeof(pubkey))) {
                 rc = -1;
                 goto out;
             }
@@ -708,7 +710,7 @@ bootutil_img_validate(struct enc_key_data *enc_state, int image_index,
         }
     }
 
-    rc = !sha256_valid;
+    rc = !image_hash_valid;
     if (rc) {
         goto out;
     }

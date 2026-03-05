@@ -133,7 +133,7 @@ boot_save_boot_status(uint8_t sw_module,
     uint16_t type;
     uint16_t ias_minor;
     size_t record_len = 0;
-    uint8_t image_hash[32]; /* SHA256 - 32 Bytes */
+    uint8_t image_hash[IMAGE_HASH_SIZE];
     uint8_t buf[MAX_BOOT_RECORD_SZ];
     bool boot_record_found = false;
     bool hash_found = false;
@@ -171,7 +171,7 @@ boot_save_boot_status(uint8_t sw_module,
             record_len = len;
             boot_record_found = true;
 
-        } else if (type == IMAGE_TLV_SHA256) {
+        } else if (type == EXPECTED_HASH_TLV) {
             /* Get the image's hash value from the manifest section. */
             if (len > sizeof(image_hash)) {
                 return -1;
