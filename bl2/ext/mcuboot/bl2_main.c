@@ -31,6 +31,7 @@
 #include "boot_hal.h"
 #include "uart_stdout.h"
 #include "boot_hal_cfg.h"
+#include "psa/crypto.h"
 
 /* Avoids the semihosting issue */
 #if defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050)
@@ -140,6 +141,12 @@ int main(void)
     }
 #endif
 
+#if defined(MCUBOOT_USE_PSA_CRYPTO)
+    if ( psa_crypto_init() != PSA_SUCCESS )
+    {
+      BOOT_LOG_ERR("Call psa_crypto_init() failed!");
+    }
+#endif
     FIH_CALL(boot_go, fih_rc, &rsp);
     if (fih_not_eq(fih_rc, FIH_SUCCESS)) {
         BOOT_LOG_ERR("Unable to find bootable image");
