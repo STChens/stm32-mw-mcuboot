@@ -42,7 +42,7 @@ __asm("  .global __ARM_use_no_argv\n");
 #ifdef MCUBOOT_ENCRYPT_RSA
 #define BL2_MBEDTLS_MEM_BUF_LEN 0x2500
 #else
-#define BL2_MBEDTLS_MEM_BUF_LEN 0x2000
+#define BL2_MBEDTLS_MEM_BUF_LEN 0x4000
 #endif
 
 /* Static buffer to be used by mbedtls for memory allocation */

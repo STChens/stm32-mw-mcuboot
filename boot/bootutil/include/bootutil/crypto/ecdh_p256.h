@@ -70,7 +70,7 @@ static inline int bootutil_ecdh_p256_shared_secret(bootutil_ecdh_p256_context *c
     }
     rc = mbedtls_ecp_point_read_binary( &ctx->ctx.mbed_ecdh.grp,
             &ctx->ctx.mbed_ecdh.Qp,
-            pk, 2*NUM_ECC_BYTES+1);
+            pk, 2*NUM_ENC_ECC_BYTES+1);
     if (rc) {
         return -1;
     }
@@ -78,14 +78,14 @@ static inline int bootutil_ecdh_p256_shared_secret(bootutil_ecdh_p256_context *c
         return -11;
     }
     /* import the private key */
-    rc = mbedtls_mpi_read_binary(&ctx->ctx.mbed_ecdh.d, sk, NUM_ECC_BYTES);
+    rc = mbedtls_mpi_read_binary(&ctx->ctx.mbed_ecdh.d, sk, NUM_ENC_ECC_BYTES);
     if (rc) {
         return -2;
     }
     /* compute secret */
     rc = mbedtls_ecdh_calc_secret( ctx,
                                    &olen, z,
-                                   NUM_ECC_BYTES,
+                                   NUM_ENC_ECC_BYTES,
 #if MBEDTLS_VERSION_NUMBER >= 0x03000000
                                    fake_rng,
 #else

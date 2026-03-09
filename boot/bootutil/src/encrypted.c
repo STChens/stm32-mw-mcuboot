@@ -171,8 +171,8 @@ static const uint8_t ec_pubkey_oid[] = MBEDTLS_OID_EC_ALG_UNRESTRICTED;
 static const uint8_t ec_secp256r1_oid[] = MBEDTLS_OID_EC_GRP_SECP256R1;
 #endif
 
-#define SHARED_KEY_LEN NUM_ECC_BYTES
-#define PRIV_KEY_LEN   NUM_ECC_BYTES
+#define SHARED_KEY_LEN NUM_ENC_ECC_BYTES
+#define PRIV_KEY_LEN   NUM_ENC_ECC_BYTES
 
 /*
  * Parses the output of `imgtool keygen`, which produces a PKCS#8 elliptic
@@ -235,7 +235,7 @@ parse_ec256_enckey(uint8_t **p, uint8_t *end, uint8_t *private_key)
         return -11;
     }
 
-    if (len != NUM_ECC_BYTES) {
+    if (len != NUM_ENC_ECC_BYTES) {
         return -12;
     }
     memcpy(private_key, *p, len);
