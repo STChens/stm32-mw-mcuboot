@@ -113,16 +113,16 @@ int main(void)
 #if defined(OEMUROT_ENABLE)
 #if defined(BOOTROM_FORMAT)
     uint32_t *version = (uint32_t*)(BL2_CODE_START - BOOTROM_HEADER_SIZE + BOOTROM_VERSION_OFFSET);
-    BOOT_LOG_INF("Starting bootloader OEMuROT %08x", (unsigned int)*version);
+    BOOT_LOG_INF(BRIGHT_BLUE"Starting bootloader OEMuROT %08x"RESET_COLOR, (unsigned int)*version);
 #elif defined(BL2_RAM_BASE)
     struct image_header *hdr = (struct image_header *)(BL2_RAM_BASE);
-    BOOT_LOG_INF("Starting bootloader OEMuROT %x.%x.%x",hdr->ih_ver.iv_major, hdr->ih_ver.iv_minor, hdr->ih_ver.iv_revision);
+    BOOT_LOG_INF(BRIGHT_BLUE"Starting bootloader OEMuROT %x.%x.%x"RESET_COLOR,hdr->ih_ver.iv_major, hdr->ih_ver.iv_minor, hdr->ih_ver.iv_revision);
 #else
     struct image_header *hdr = (struct image_header *)(FLASH_BASE + FLASH_AREA_BL2_OFFSET);
-    BOOT_LOG_INF("Starting bootloader OEMuROT %x.%x.%x",hdr->ih_ver.iv_major, hdr->ih_ver.iv_minor, hdr->ih_ver.iv_revision);
+    BOOT_LOG_INF(BRIGHT_BLUE"Starting bootloader OEMuROT %x.%x.%x"RESET_COLOR,hdr->ih_ver.iv_major, hdr->ih_ver.iv_minor, hdr->ih_ver.iv_revision);
 #endif /* BOOTROM_FORMAT */
 #else
-    BOOT_LOG_INF("Starting bootloader OEMiROT");
+    BOOT_LOG_INF(BRIGHT_GREEN"Starting bootloader OEMiROT"RESET_COLOR);
 #endif
 
     FIH_CALL(boot_nv_security_counter_init, fih_rc);
@@ -152,7 +152,7 @@ int main(void)
 
     BOOT_LOG_INF("Bootloader chainload address offset: 0x%x",
                  (int)rsp.br_image_off);
-    BOOT_LOG_INF("Jumping to the first image slot");
+    BOOT_LOG_INF(BRIGHT_YELLOW"Jumping to the first image slot"RESET_COLOR);
     do_boot(&rsp);
 
     BOOT_LOG_ERR("Never should get here");
