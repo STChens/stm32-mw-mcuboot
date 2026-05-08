@@ -30,6 +30,12 @@ extern "C" {
 
 #ifdef MCUBOOT_HAVE_LOGGING
 
+#define BRIGHT_RED "\033[91m"
+#define BRIGHT_GREEN "\033[92m"
+#define BRIGHT_YELLOW "\033[93m"
+#define BRIGHT_BLUE "\033[94m"
+#define RESET_COLOR "\033[0m"
+  
 #define BOOT_LOG_ERR(...) MCUBOOT_LOG_ERR(__VA_ARGS__)
 #define BOOT_LOG_WRN(...) MCUBOOT_LOG_WRN(__VA_ARGS__)
 #define BOOT_LOG_INF(...) MCUBOOT_LOG_INF(__VA_ARGS__)
@@ -37,6 +43,12 @@ extern "C" {
 #define BOOT_LOG_SIM(...) MCUBOOT_LOG_SIM(__VA_ARGS__)
 
 #else
+#error
+#define BRIGHT_RED
+#define BRIGHT_GREEN
+#define BRIGHT_YELLOW
+#define BRIGHT_BLUE
+#define RESET_COLOR
 
 #define BOOT_LOG_ERR(...) IGNORE(__VA_ARGS__)
 #define BOOT_LOG_WRN(...) IGNORE(__VA_ARGS__)

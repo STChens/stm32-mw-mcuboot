@@ -30,6 +30,7 @@
 #include "bootutil_priv.h"
 #include "bootutil/image.h"
 #include "flash_map_backend/flash_map_backend.h"
+#include "bootutil/crypto/sha.h"
 
 /* Error codes for using the shared memory area. */
 #define SHARED_MEMORY_OK            (0)
