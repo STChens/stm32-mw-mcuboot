@@ -438,6 +438,7 @@ bootutil_img_validate(struct enc_key_data *enc_state, int image_index,
         } else if (rc > 0) {
             break;
         }
+        BOOT_LOG_DBG("TLV type 0x%x, len %d, off 0x%x", type, len, off);
 
         if (type == EXPECTED_HASH_TLV) {
             /*
