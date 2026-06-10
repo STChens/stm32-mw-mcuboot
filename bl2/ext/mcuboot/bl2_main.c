@@ -121,6 +121,7 @@ int main(void)
     struct image_header *hdr = (struct image_header *)(FLASH_BASE + FLASH_AREA_BL2_OFFSET);
     BOOT_LOG_INF(BRIGHT_BLUE"Starting bootloader OEMuROT %x.%x.%x"RESET_COLOR,hdr->ih_ver.iv_major, hdr->ih_ver.iv_minor, hdr->ih_ver.iv_revision);
 #endif /* BOOTROM_FORMAT */
+    BOOT_LOG_INF(BRIGHT_BLUE"Built on %s %s"RESET_COLOR, __DATE__, __TIME__);
 #else
     BOOT_LOG_INF(BRIGHT_GREEN"Starting bootloader OEMiROT"RESET_COLOR);
 #endif
