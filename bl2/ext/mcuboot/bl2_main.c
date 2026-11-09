@@ -95,13 +95,6 @@ int main(void)
     struct boot_arm_vector_table *vt;
 #endif
 
-#if !defined (MCUBOOT_USE_HAL)
-    /* Initialise the mbedtls static memory allocator so that mbedtls allocates
-     * memory from the provided static buffer instead of from the heap.
-     */
-    mbedtls_memory_buffer_alloc_init(mbedtls_mem_buf, BL2_MBEDTLS_MEM_BUF_LEN);
-#endif /* MCUBOOT_USE_HAL */
-
 #if defined(MCUBOOT_HAVE_LOGGING)
     stdio_init();
 #endif
@@ -127,12 +120,6 @@ int main(void)
     BOOT_LOG_INF(BRIGHT_GREEN"Starting bootloader OEMiROT"RESET_COLOR);
 #endif
 
-    FIH_CALL(boot_nv_security_counter_init, fih_rc);
-    if (fih_not_eq(fih_rc, FIH_SUCCESS)) {
-        BOOT_LOG_ERR("Error while initializing the security counter");
-        FIH_PANIC;
-    }
-
 #if defined(OEMIROT_FAST_WAKE_UP)
     FIH_CALL(boot_platform_wakeup, fih_rc);
     if (fih_eq(fih_rc, FIH_SUCCESS)) {
@@ -148,6 +135,19 @@ int main(void)
       BOOT_LOG_ERR(BRIGHT_RED"Call psa_crypto_init() failed!"RESET_COLOR);
     }
 #endif
+#if !defined (MCUBOOT_USE_HAL)
+    /* Initialise the mbedtls static memory allocator so that mbedtls allocates
+     * memory from the provided static buffer instead of from the heap.
+     */
+    mbedtls_memory_buffer_alloc_init(mbedtls_mem_buf, BL2_MBEDTLS_MEM_BUF_LEN);
+#endif /* MCUBOOT_USE_HAL */
+
+    FIH_CALL(boot_nv_security_counter_init, fih_rc);
+    if (fih_not_eq(fih_rc, FIH_SUCCESS)) {
+        BOOT_LOG_ERR("Error while initializing the security counter");
+        FIH_PANIC;
+    }
+
     FIH_CALL(boot_go, fih_rc, &rsp);
     if (fih_not_eq(fih_rc, FIH_SUCCESS)) {
         BOOT_LOG_ERR("Unable to find bootable image");
