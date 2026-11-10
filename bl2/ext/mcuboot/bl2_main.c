@@ -129,18 +129,19 @@ int main(void)
     }
 #endif
 
-#if defined(MCUBOOT_USE_PSA_CRYPTO)
-    if ( psa_crypto_init() != PSA_SUCCESS )
-    {
-      BOOT_LOG_ERR(BRIGHT_RED"Call psa_crypto_init() failed!"RESET_COLOR);
-    }
-#endif
 #if !defined (MCUBOOT_USE_HAL)
     /* Initialise the mbedtls static memory allocator so that mbedtls allocates
      * memory from the provided static buffer instead of from the heap.
      */
     mbedtls_memory_buffer_alloc_init(mbedtls_mem_buf, BL2_MBEDTLS_MEM_BUF_LEN);
 #endif /* MCUBOOT_USE_HAL */
+
+#if defined(MCUBOOT_USE_PSA_CRYPTO)
+    if ( psa_crypto_init() != PSA_SUCCESS )
+    {
+      BOOT_LOG_ERR(BRIGHT_RED"Call psa_crypto_init() failed!"RESET_COLOR);
+    }
+#endif
 
     FIH_CALL(boot_nv_security_counter_init, fih_rc);
     if (fih_not_eq(fih_rc, FIH_SUCCESS)) {
