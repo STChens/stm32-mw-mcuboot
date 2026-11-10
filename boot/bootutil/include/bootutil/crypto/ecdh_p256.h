@@ -177,10 +177,10 @@ static inline int bootutil_ecdh_p256_shared_secret(bootutil_ecdh_p256_context *c
     /* Set HW peripheral input parameter : public key */
     /* Store public key except the first byte that is on the uncompressed form */
     ECC_MulIn.pointX = (uint8_t *)(&pk[1]);
-    ECC_MulIn.pointY = (uint8_t *)(&pk[NUM_ECC_BYTES + 1]);
+    ECC_MulIn.pointY = (uint8_t *)(&pk[NUM_ENC_ECC_BYTES + 1]);
 
     /* Store private in local buffer to insure the persistency */
-    ECC_MulIn.scalarMulSize = NUM_ECC_BYTES;
+    ECC_MulIn.scalarMulSize = NUM_ENC_ECC_BYTES;
     ECC_MulIn.scalarMul = (uint8_t *)sk;
 
     /* Initialize HW peripheral */

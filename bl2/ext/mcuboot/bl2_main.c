@@ -18,7 +18,7 @@
 
 #include "mcuboot_config/mcuboot_config.h"
 #include <assert.h>
-#if !defined (MCUBOOT_USE_HAL)
+#if !defined (MCUBOOT_USE_HAL) || defined(MCUBOOT_USE_PSA_CRYPTO)
 #include "mbedtls/memory_buffer_alloc.h"
 #endif /* MCUBOOT_USE_HAL */
 #include "bootutil/security_cnt.h"
@@ -38,7 +38,7 @@
 __asm("  .global __ARM_use_no_argv\n");
 #endif
 
-#if !defined (MCUBOOT_USE_HAL)
+#if !defined (MCUBOOT_USE_HAL) || defined(MCUBOOT_USE_PSA_CRYPTO)
 #ifdef MCUBOOT_ENCRYPT_RSA
 #define BL2_MBEDTLS_MEM_BUF_LEN 0x2500
 #else
@@ -129,7 +129,7 @@ int main(void)
     }
 #endif
 
-#if !defined (MCUBOOT_USE_HAL)
+#if !defined (MCUBOOT_USE_HAL) || defined(MCUBOOT_USE_PSA_CRYPTO) 
     /* Initialise the mbedtls static memory allocator so that mbedtls allocates
      * memory from the provided static buffer instead of from the heap.
      */
